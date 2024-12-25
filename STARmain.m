@@ -474,6 +474,37 @@ close (gcf)
 %%%%%%%%% Figure 7-Bimodality Analysis %%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Initialize results containers for patient data
+circStatsCluster1 = struct();
+circStatsCluster2 = struct();
+
+sigDirections = lfpDir;
+% use unitDir for unit analyzing unit waves
+% sigDirections =unitDir
+
+% Reduce precision to work with fitmvmdist.
+sigDirections = (round(sigDirections * 10^2) / 10^2)';
+
+% Figure 7A: Evaluate normality for overall direction distribution 
+[p_valAll, k_statAll, k_permsAll] = evaluateNormality(sigDirections, 10000, 100, 'starmain_overall_IEDdistFit.pdf');
+
+% Step: Fit von Mises Mixture Model (vMM) to direction data (Figure 7B: Clustered vMM distributions)
+threshold = [0.3 0.7];
+GMM = fitmvmdist(sigDirections, 2);
+[clusters, nLogL, PostP] = cluster(GMM, sigDirections);
+
+% Identify shared regions for clusters
+idxBothSharedDiag = PostP(:, 1) >= threshold(1) & PostP(:, 1) <= threshold(2);
+numInBoth = sum(idxBothSharedDiag);
+
+% Figure 7B: Fit von Mises distribution for each cluster 
+circStatsCluster1 = circ_stats(sigDirections(clusters == 1 | idxBothSharedDiag));
+circStatsCluster2 = circ_stats(sigDirections(clusters == 2 | idxBothSharedDiag));
+
+% Figure 7C: Evaluate normality for each cluster
+[p_val_1, k_stat_1, k_perm_1] = evaluateNormality(sigDirections(clusters == 1 | idxBothSharedDiag), 10000, 100, 'starmain_cluster1_IEDdistFit.pdf');
+[p_val_2, k_stat_2, k_perm_2] = evaluateNormality(sigDirections(clusters == 2 | idxBothSharedDiag), 10000, 100, 'starmain_cluster2_IEDdistFit.pdf');
+
 % running simulations
 a1 = - pi; a2 = pi;
 
